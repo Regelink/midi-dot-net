@@ -173,7 +173,7 @@ namespace Midi
         [StructLayout(LayoutKind.Sequential)]
         public struct HMIDIOUT
         {
-            public Int32 handle;
+            public IntPtr handle;
         }
 
         /// <summary>
@@ -182,7 +182,7 @@ namespace Midi
         [StructLayout(LayoutKind.Sequential)]
         public struct HMIDIIN
         {
-            public Int32 handle;
+            public IntPtr handle;
         }
 
         #endregion
