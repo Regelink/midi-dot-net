@@ -83,6 +83,11 @@ namespace Midi
         /// </summary>
         public delegate void PitchBendHandler(PitchBendMessage msg);
 
+        /// <summary>
+        /// Delegate called when an input device receives a SysEx message.
+        /// </summary>
+        public delegate void SysExHandler(SysExMessage msg);
+
         #endregion
 
         #region Events
@@ -113,6 +118,11 @@ namespace Midi
         public event PitchBendHandler PitchBend;
 
         /// <summary>
+        /// Event called when an input device receives a SysEx message.
+        /// </summary>
+        public event SysExHandler SysEx;
+
+        /// <summary>
         /// Removes all event handlers from the input events on this device.
         /// </summary>
         public void RemoveAllEventHandlers()
@@ -122,6 +132,7 @@ namespace Midi
             ControlChange = null;
             ProgramChange = null;
             PitchBend = null;
+            SysEx = null;
         }
 
         #endregion
@@ -201,8 +212,24 @@ namespace Midi
             lock (this)
             {
                 CheckOpen();
+
+                isClosing = true;
+                if (LongMsgBuffers.Count > 0)
+                {
+                    CheckReturnCode(Win32API.midiInReset(handle));
+                }
+                //Destroy any Long Message buffers we created when opening this device.
+                //foreach (IntPtr buffer in LongMsgBuffers)
+                //{
+                //    if (DestroyLongMsgBuffer(buffer))
+                //    {
+                //        LongMsgBuffers.Remove(buffer);
+                //    }
+                //}
+
                 CheckReturnCode(Win32API.midiInClose(handle));
                 isOpen = false;
+                isClosing = false;
             }
         }
 
@@ -230,6 +257,8 @@ namespace Midi
         /// <param name="clock">If non-null, the clock's <see cref="Clock.Time"/> property will
         /// be used to assign a timestamp to each incoming message.  If null, timestamps will be in
         /// seconds since StartReceiving() was called.</param>
+        /// <param name="handleSysEx">Boolean, when TRUE buffers will be created to enable handling
+        /// of incoming MIDI Long Messages (SysEx). When FALSE, all long messages are ignored.</param>
         /// <exception cref="InvalidOperationException">The device is not open or is already
         /// receiving.
         /// </exception>
@@ -245,6 +274,11 @@ namespace Midi
         /// </remarks>
         public void StartReceiving(Clock clock)
         {
+            StartReceiving(clock, false);
+        }
+
+        public void StartReceiving(Clock clock, bool handleSysEx)
+        {
             if (isInsideInputHandler)
             {
                 throw new InvalidOperationException("Device is receiving.");
@@ -253,6 +287,12 @@ namespace Midi
             {
                 CheckOpen();
                 CheckNotReceiving();
+
+                if (handleSysEx)
+                {
+                    LongMsgBuffers.Add(CreateLongMsgBuffer());
+                }
+
                 CheckReturnCode(Win32API.midiInStart(handle));
                 isReceiving = true;
                 this.clock = clock;
@@ -462,11 +502,134 @@ namespace Midi
                         // Unsupported messages are ignored.
                     }
                 }
+                else if (wMsg == Win32API.MidiInMessage.MIM_LONGDATA)
+                {
+                    Byte[] data;
+                    UInt32 win32Timestamp;
+                    if (LongMsg.IsSysEx(dwParam1, dwParam2))
+                    {
+                        if (SysEx != null)
+                        {
+                            LongMsg.DecodeSysEx(dwParam1, dwParam2, out data, out win32Timestamp);
+                            if (data.Length != 0)
+                            {
+                                SysEx(new SysExMessage(this, data, clock == null ? win32Timestamp / 1000f : clock.Time));
+                            }
+
+                            if (isClosing)
+                            {
+                                //buffers no longer needed
+                                DestroyLongMsgBuffer(dwParam1);
+                            }
+                            else
+                            {
+                                //prepare the buffer for the next message
+                                RecycleLongMsgBuffer(dwParam1);
+                            }
+                        }
+                    }
+                }
+                // The rest of these are just for long message testing
+                else if (wMsg == Win32API.MidiInMessage.MIM_MOREDATA)
+                {
+                    SysEx(new SysExMessage(this, new byte[] { 0x13 }, 13));
+                }
+                else if (wMsg == Win32API.MidiInMessage.MIM_OPEN)
+                {
+                    //SysEx(new SysExMessage(this, new byte[] { 0x01 }, 1));
+                }
+                else if (wMsg == Win32API.MidiInMessage.MIM_CLOSE)
+                {
+                    //SysEx(new SysExMessage(this, new byte[] { 0x02 }, 2));
+                }
+                else if (wMsg == Win32API.MidiInMessage.MIM_ERROR)
+                {
+                    SysEx(new SysExMessage(this, new byte[] { 0x03 }, 3));
+                }
+                else if (wMsg == Win32API.MidiInMessage.MIM_LONGERROR)
+                {
+                    SysEx(new SysExMessage(this, new byte[] { 0x04 }, 4));
+                }
+                else
+                {
+                    SysEx(new SysExMessage(this, new byte[] { 0x05 }, 5));
+                }
             }
             finally
             {
                 isInsideInputHandler = false;
             }
+        }
+
+        private IntPtr CreateLongMsgBuffer()
+        {
+            //add a buffer so we can receive SysEx messages
+            IntPtr ptr;
+            UInt32 size = (UInt32)System.Runtime.InteropServices.Marshal.SizeOf(typeof(Win32API.MIDIHDR));
+            Win32API.MIDIHDR header = new Win32API.MIDIHDR();
+            header.lpData = System.Runtime.InteropServices.Marshal.AllocHGlobal(4096);
+            header.dwBufferLength = 4096;
+            header.dwFlags = 0;
+
+            try
+            {
+                ptr = System.Runtime.InteropServices.Marshal.AllocHGlobal(System.Runtime.InteropServices.Marshal.SizeOf(typeof(Win32API.MIDIHDR)));
+            }
+            catch (Exception)
+            {
+                System.Runtime.InteropServices.Marshal.FreeHGlobal(header.lpData);
+                throw;
+            }
+
+            try
+            {
+                System.Runtime.InteropServices.Marshal.StructureToPtr(header, ptr, false);
+            }
+            catch (Exception)
+            {
+                System.Runtime.InteropServices.Marshal.FreeHGlobal(header.lpData);
+                System.Runtime.InteropServices.Marshal.FreeHGlobal(ptr);
+                throw;
+            }
+
+            CheckReturnCode(Win32API.midiInPrepareHeader(handle, ptr, size));
+            CheckReturnCode(Win32API.midiInAddBuffer(handle, ptr, size));
+            //CheckReturnCode(Win32API.midiInUnprepareHeader(handle, ptr, size));
+
+            return ptr;
+        }
+
+        private IntPtr RecycleLongMsgBuffer(UIntPtr ptr)
+        {
+            IntPtr newPtr = unchecked((IntPtr)(long)(ulong)ptr);
+            UInt32 size = (UInt32)System.Runtime.InteropServices.Marshal.SizeOf(typeof(Win32API.MIDIHDR));
+            CheckReturnCode(Win32API.midiInUnprepareHeader(handle, newPtr, size));
+
+            CheckReturnCode(Win32API.midiInPrepareHeader(handle, newPtr, size));
+            CheckReturnCode(Win32API.midiInAddBuffer(handle, newPtr, size));
+            //return unchecked((UIntPtr)(ulong)(long)newPtr);
+            return newPtr;
+        }
+
+        /// <summary>
+        /// Releases the resources associated with the specified MidiHeader pointer.
+        /// </summary>
+        /// <param name="ptr">
+        /// The pointer to MIDIHDR buffer.
+        /// </param>
+        private bool DestroyLongMsgBuffer(UIntPtr ptr)
+        {
+            IntPtr newPtr = unchecked((IntPtr)(long)(ulong)ptr);
+            UInt32 size = (UInt32)System.Runtime.InteropServices.Marshal.SizeOf(typeof(Win32API.MIDIHDR));
+            CheckReturnCode(Win32API.midiInUnprepareHeader(handle, newPtr, size));
+
+            Win32API.MIDIHDR header = (Win32API.MIDIHDR)System.Runtime.InteropServices.Marshal.PtrToStructure(newPtr, typeof(Win32API.MIDIHDR));
+            System.Runtime.InteropServices.Marshal.FreeHGlobal(header.lpData);
+            System.Runtime.InteropServices.Marshal.FreeHGlobal(newPtr);
+
+            LongMsgBuffers.Remove(newPtr);
+
+            return true;
         }
 
         #endregion
@@ -496,6 +659,10 @@ namespace Midi
         /// </summary>
         [ThreadStatic]
         static bool isInsideInputHandler = false;
+
+        //Holds a list of pointers to all the buffers created for handling Long Messages.
+        private System.Collections.Generic.List<IntPtr> LongMsgBuffers = new System.Collections.Generic.List<IntPtr>();
+        private bool isClosing = false;
 
         #endregion
     }

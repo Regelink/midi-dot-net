@@ -223,6 +223,27 @@ namespace Midi
             public UInt32 dwSupport;
         }
 
+        /// <summary>
+        /// Strut to hold outgoing long messages (sysex)
+        /// </summary>
+        /// Win32 docs: http://msdn.microsoft.com/en-us/library/ms711592(v=VS.85).aspx
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MIDIHDR
+        {
+            public IntPtr lpData;
+            public int dwBufferLength;
+            public int dwBytesRecorded;
+            public IntPtr dwUser;
+            public int dwFlags;
+            public IntPtr lpNext;
+            public IntPtr reserved;
+            public int dwOffset;
+
+            //public IntPtr dwReserved;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)]
+            public int[] reservedArray;
+        }
+
         #endregion
 
         #region Functions for MIDI Output
@@ -263,7 +284,7 @@ namespace Midi
                                          MidiOutProc dwCallback, UIntPtr dwCallbackInstance)
         {
             return midiOutOpen(out lphmo, uDeviceID, dwCallback, dwCallbackInstance,
-                dwCallback == null ? MidiOpenFlags.CALLBACK_NULL : MidiOpenFlags.CALLBACK_FUNCTION);
+                dwCallback == null ? MidiOpenFlags.CALLBACK_NULL : MidiOpenFlags.CALLBACK_FUNCTION & MidiOpenFlags.MIDI_IO_STATUS);
         }
 
         /// <summary>
@@ -297,6 +318,28 @@ namespace Midi
         {
             return midiOutGetErrorText(mmrError, lpText, (UInt32)lpText.Capacity);
         }
+
+        /// <summary>
+        /// Sends a long MIDI message (sysex).
+        /// </summary>
+        /// Win32 docs: http://msdn.microsoft.com/en-us/library/ms711629(VS.85).aspx
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern MMRESULT midiOutLongMsg(HMIDIOUT hmo, IntPtr lpMidiOutHdr, UInt32 cbMidiOutHdr);
+        // MMRESULT midiOutLongMsg(HMIDIOUT hmo, LPMIDIHDR lpMidiOutHdr, UINT cbMidiOutHdr);
+
+        /// <summary>
+        /// Prepares a long message for sending
+        /// </summary>
+        /// Win32 docs: http://msdn.microsoft.com/en-us/library/ms711634(v=VS.85).aspx
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern MMRESULT midiOutPrepareHeader(HMIDIOUT hmo, IntPtr lpMidiOutHdr, UInt32 cbMidiOutHdr);
+
+        /// <summary>
+        /// Frees header space after sending long message
+        /// </summary>
+        /// Win32 docs: http://msdn.microsoft.com/en-us/library/ms711641(v=VS.85).aspx
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern MMRESULT midiOutUnprepareHeader(HMIDIOUT hmo, IntPtr lpMidiOutHdr, UInt32 cbMidiOutHdr);
 
         #endregion
 
@@ -379,6 +422,27 @@ namespace Midi
         {
             return midiInGetErrorText(mmrError, lpText, (UInt32)lpText.Capacity);
         }
+
+        /// <summary>
+        /// Send a buffer to and input device in order to receive SysEx messages.
+        /// </summary>
+        /// Win32 docs: http://msdn.microsoft.com/en-us/library/dd798450(VS.85).aspx
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern MMRESULT midiInAddBuffer(HMIDIIN hMidiIn, IntPtr lpMidiInHdr, UInt32 cbMidiInHdr);
+
+        /// <summary>
+        /// Prepare an input buffer before passing to midiInAddBuffer.
+        /// </summary>
+        /// Win32 docs: http://msdn.microsoft.com/en-us/library/dd798459(VS.85).aspx
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern MMRESULT midiInPrepareHeader(HMIDIIN hMidiIn, IntPtr headerPtr, UInt32 cbMidiInHdr);
+
+        /// <summary>
+        /// Clean up preparation performed by midiInPrepareHeader.
+        /// </summary>
+        /// Win32 docs: http://msdn.microsoft.com/en-us/library/dd798464(VS.85).aspx
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern MMRESULT midiInUnprepareHeader(HMIDIIN hMidiIn, IntPtr headerPtr, UInt32 cbMidiInHdr);
 
         #endregion
 

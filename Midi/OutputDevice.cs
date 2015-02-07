@@ -258,6 +258,59 @@ namespace Midi
             }
         }
 
+        /// <summary>
+        /// Sends a System Exclusive (sysex) message to this MIDI output device.
+        /// </summary>
+        /// <param name="data">The message to send (as byte array)</param>
+        /// <exception cref="DeviceException">The message cannot be sent.</exception>
+        public void SendSysEx(Byte[] data)
+        {
+            lock (this)
+            {
+                //Win32API.MMRESULT result;
+                IntPtr ptr;
+                UInt32 size = (UInt32)System.Runtime.InteropServices.Marshal.SizeOf(typeof(Win32API.MIDIHDR));
+                Win32API.MIDIHDR header = new Win32API.MIDIHDR();
+                header.lpData = System.Runtime.InteropServices.Marshal.AllocHGlobal(data.Length);
+                for (int i = 0; i < data.Length; i++)
+                    System.Runtime.InteropServices.Marshal.WriteByte(header.lpData, i, data[i]);
+                header.dwBufferLength = data.Length;
+                header.dwBytesRecorded = data.Length;
+                header.dwFlags = 0;
+
+                try
+                {
+                    ptr = System.Runtime.InteropServices.Marshal.AllocHGlobal(System.Runtime.InteropServices.Marshal.SizeOf(typeof(Win32API.MIDIHDR)));
+                }
+                catch (Exception)
+                {
+                    System.Runtime.InteropServices.Marshal.FreeHGlobal(header.lpData);
+                    throw;
+                }
+
+                try
+                {
+                    System.Runtime.InteropServices.Marshal.StructureToPtr(header, ptr, false);
+                }
+                catch (Exception)
+                {
+                    System.Runtime.InteropServices.Marshal.FreeHGlobal(header.lpData);
+                    System.Runtime.InteropServices.Marshal.FreeHGlobal(ptr);
+                    throw;
+                }
+
+                //result = Win32API.midiOutPrepareHeader(handle, ptr, size);
+                //if (result == 0) result = Win32API.midiOutLongMsg(handle, ptr, size);
+                //if (result == 0) result = Win32API.midiOutUnprepareHeader(handle, ptr, size);
+                CheckReturnCode(Win32API.midiOutPrepareHeader(handle, ptr, size));
+                CheckReturnCode(Win32API.midiOutLongMsg(handle, ptr, size));
+                CheckReturnCode(Win32API.midiOutUnprepareHeader(handle, ptr, size));
+
+                System.Runtime.InteropServices.Marshal.FreeHGlobal(header.lpData);
+                System.Runtime.InteropServices.Marshal.FreeHGlobal(ptr);
+            }
+        }
+
         #endregion
 
         #region Private Methods

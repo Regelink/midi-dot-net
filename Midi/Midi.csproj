@@ -63,6 +63,7 @@
     <Compile Include="DeviceBase.cs" />
     <Compile Include="Instrument.cs" />
     <Compile Include="Interval.cs" />
+    <Compile Include="LongMsg.cs" />
     <Compile Include="Note.cs" />
     <Compile Include="Percussion.cs" />
     <Compile Include="InputDevice.cs" />
