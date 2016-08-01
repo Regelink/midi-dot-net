@@ -424,8 +424,6 @@ namespace Midi
             return midiInGetErrorText(mmrError, lpText, (UInt32)lpText.Capacity);
         }
 
-#region SysEx
-
         /// <summary>
         /// Send a buffer to and input device in order to receive SysEx messages.
         /// </summary>
@@ -446,8 +444,6 @@ namespace Midi
         /// Win32 docs: http://msdn.microsoft.com/en-us/library/dd798464(VS.85).aspx
         [DllImport("winmm.dll", SetLastError = true)]
         public static extern MMRESULT midiInUnprepareHeader(HMIDIIN hMidiIn, IntPtr headerPtr, UInt32 cbMidiInHdr);
-
-#endregion
 
         #endregion
 
