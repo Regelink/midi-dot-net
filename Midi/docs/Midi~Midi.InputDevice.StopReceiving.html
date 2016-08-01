@@ -27,7 +27,7 @@
       <p> Stops this input device from receiving messages. </p>
       <div class="syntax">public <a href="">void</a> StopReceiving();</div>
       <h4 class="dtH4">Remarks</h4>
-      <p>This method waits for all in-progress input event handlers to finish, and then joins (shuts down) the background thread that was created in <a href="Midi~Midi.InputDevice.StartReceiving.html">StartReceiving</a>. Thus, when this function returns you can be sure that no more event handlers will be invoked.</p>
+      <p>This method waits for all in-progress input event handlers to finish, and then joins (shuts down) the background thread that was created in <a href="Midi~Midi.InputDevice.StartReceiving1.html">StartReceiving</a>. Thus, when this function returns you can be sure that no more event handlers will be invoked.</p>
       <p>It is illegal to call this method from an input event handler (ie, from the background thread), and doing so throws an exception. If an event handler really needs to call this method, consider using BeginInvoke to schedule it on another thread.</p>
       <h4 class="dtH4">Exceptions</h4>
       <div class="tablediv">
