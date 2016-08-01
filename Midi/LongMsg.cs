@@ -54,8 +54,9 @@ namespace Midi
         /// <param name="data">SysEx Data.</param>
         /// <returns>A value that can be passed to midiOutShortMsg.</returns>
         /// <exception cref="ArgumentOutOfRangeException">pitch is not in MIDI range.</exception>
-        //public static UInt32 EncodeSysEx(Byte[] data)
-        //{
-        //}
+        public static UInt32 EncodeSysEx(Byte[] data)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

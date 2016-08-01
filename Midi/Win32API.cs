@@ -309,17 +309,6 @@ namespace Midi
         public static extern MMRESULT midiOutShortMsg(HMIDIOUT hmo, UInt32 dwMsg);
 
         /// <summary>
-        /// Gets the error text for a return code related to an output device.
-        /// </summary>
-        /// NOTE: This is adapted from the original Win32 function in order to make it typesafe.
-        ///
-        /// Win32 docs: http://msdn.microsoft.com/en-us/library/ms711622(VS.85).aspx
-        public static MMRESULT midiOutGetErrorText(MMRESULT mmrError, StringBuilder lpText)
-        {
-            return midiOutGetErrorText(mmrError, lpText, (UInt32)lpText.Capacity);
-        }
-
-        /// <summary>
         /// Sends a long MIDI message (sysex).
         /// </summary>
         /// Win32 docs: http://msdn.microsoft.com/en-us/library/ms711629(VS.85).aspx
@@ -340,6 +329,18 @@ namespace Midi
         /// Win32 docs: http://msdn.microsoft.com/en-us/library/ms711641(v=VS.85).aspx
         [DllImport("winmm.dll", SetLastError = true)]
         public static extern MMRESULT midiOutUnprepareHeader(HMIDIOUT hmo, IntPtr lpMidiOutHdr, UInt32 cbMidiOutHdr);
+
+
+        /// <summary>
+        /// Gets the error text for a return code related to an output device.
+        /// </summary>
+        /// NOTE: This is adapted from the original Win32 function in order to make it typesafe.
+        ///
+        /// Win32 docs: http://msdn.microsoft.com/en-us/library/ms711622(VS.85).aspx
+        public static MMRESULT midiOutGetErrorText(MMRESULT mmrError, StringBuilder lpText)
+        {
+            return midiOutGetErrorText(mmrError, lpText, (UInt32)lpText.Capacity);
+        }
 
         #endregion
 
@@ -423,6 +424,8 @@ namespace Midi
             return midiInGetErrorText(mmrError, lpText, (UInt32)lpText.Capacity);
         }
 
+#region SysEx
+
         /// <summary>
         /// Send a buffer to and input device in order to receive SysEx messages.
         /// </summary>
@@ -443,6 +446,8 @@ namespace Midi
         /// Win32 docs: http://msdn.microsoft.com/en-us/library/dd798464(VS.85).aspx
         [DllImport("winmm.dll", SetLastError = true)]
         public static extern MMRESULT midiInUnprepareHeader(HMIDIIN hMidiIn, IntPtr headerPtr, UInt32 cbMidiInHdr);
+
+#endregion
 
         #endregion
 

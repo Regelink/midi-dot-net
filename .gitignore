@@ -1,11 +1,7 @@
 /MidiDotNet.v12.suo
-/Midi/obj/Debug/DesignTimeResolveAssemblyReferencesInput.cache
-/MidiExamples/bin/Debug/MidiExamples.exe.config
-/MidiExamples/bin/Debug/MidiExamples.vshost.exe
-/MidiExamples/bin/Debug/MidiExamples.vshost.exe.config
-/MidiExamples/bin/Debug/MidiExamples.vshost.exe.manifest
-/MidiExamples/obj/Debug/DesignTimeResolveAssemblyReferencesInput.cache
-/MidiExamples/obj/Debug/MidiExamples.csproj.FileListAbsolute.txt
-/MidiExamples/obj/Debug/build.force
-/MidiUnitTests/obj/Debug/DesignTimeResolveAssemblyReferencesInput.cache
-/MidiUnitTests/obj/Debug/build.force
+/Midi/bin
+/Midi/obj
+/MidiExamples/bin
+/MidiExamples/obj
+/MidiUnitTests/bin
+/MidiUnitTests/obj

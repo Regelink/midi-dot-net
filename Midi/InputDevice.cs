@@ -140,6 +140,17 @@ namespace Midi
         #region Public Methods and Properties
 
         /// <summary>
+        /// Refresh the list of input devices
+        /// </summary>
+        public static void UpdateInstalledDevices()
+        {
+            lock (staticLock)
+            {
+                installedDevices = null;
+            }
+        }
+
+        /// <summary>
         /// List of input devices installed on this system.
         /// </summary>
         public static ReadOnlyCollection<InputDevice> InstalledDevices
